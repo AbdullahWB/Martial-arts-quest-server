@@ -76,6 +76,15 @@ async function run() {
             res.send(result);
         })
 
+
+        // add classes in db
+        
+        app.post('/classes', async (req, res) => { 
+            const item = req.body;
+            console.log(item);
+            const result = await studentsCollection.insertOne(item);
+            res.send(result);
+        })
         
 
         // Send a ping to confirm a successful connection
