@@ -29,9 +29,21 @@ async function run() {
         const usersCollection = client.db('MartialArtsQuest').collection('users')
         const instructorCollection = client.db('MartialArtsQuest').collection('instructors')
         const classesCollection = client.db('MartialArtsQuest').collection('classes')
+        const studentsCollection = client.db('MartialArtsQuest').collection('addClasses')
 
 
         // user db in here
+
+        // app.get('/users', async (req, res) => {
+        //     const email = req.query.email
+        //     if (!email) {
+        //         res.send([])
+        //     }
+        //     const query = { email: email }
+        //     const result = await usersCollection.find(query).toArray();
+        //     res.send(result)
+        // })
+
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email
             const user = req.body
@@ -45,17 +57,26 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/users', async (req, res) => { 
+            const result = await usersCollection.find().toArray();
+            res.send(result);
+        })
+
         // initiator db in here
+
         app.get('/instructors', async (req, res) => {
             const result = await instructorCollection.find().sort({ students: -1 }).toArray();
             res.send(result);
         })
         
         // classes db in here
+
         app.get('/classes', async (req, res) => {
             const result = await classesCollection.find().sort({ students: -1 }).toArray();
             res.send(result);
         })
+
+        
 
         // Send a ping to confirm a successful connection
         await client.db('admin').command({ ping: 1 })
