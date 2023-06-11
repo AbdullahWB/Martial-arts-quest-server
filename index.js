@@ -79,11 +79,21 @@ async function run() {
 
         // add classes in db
         
-        app.post('/classes', async (req, res) => { 
+        app.post('/addClasses', async (req, res) => { 
             const item = req.body;
             console.log(item);
             const result = await studentsCollection.insertOne(item);
             res.send(result);
+        })
+
+        app.get('/addClasses', async (req, res) => {
+            const email = req.query.email
+            if (!email) {
+                res.send([])
+            }
+            const query = { studentEmail: email }
+            const result = await studentsCollection.find(query).toArray();
+            res.send(result)
         })
         
 
