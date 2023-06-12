@@ -62,6 +62,19 @@ async function run() {
             res.send(result);
         })
 
+        app.patch('/users/role/:id', async (req, res) => { 
+            const id = req.params.id;
+            const role = req.query.role
+            const filter = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: {
+                    role: role,
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc)
+            res.send(result)
+        })
+
         // initiator db in here
 
         app.get('/instructors', async (req, res) => {
