@@ -69,6 +69,15 @@ async function run() {
             res.send(result);
         })
         
+        app.post("/classes", async (req, res) => { 
+            const body = req.body;
+            if (!body) {
+                return
+            }
+            const result = await classesCollection.insertOne(body);
+            res.send(result)
+        })
+
         // classes db in here
 
         app.get('/classes', async (req, res) => {
