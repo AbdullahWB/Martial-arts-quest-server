@@ -100,6 +100,32 @@ async function run() {
             res.send(result)
         })
 
+        // admin role
+        app.get('/users/role/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                res.send({ admin: false, instructor: false, student: false });
+            }
+
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+
+            if (!user) {
+                res.send({ admin: false, instructor: false, student: false });
+            }
+
+            const role = user.role;
+            const result = {
+                admin: role === 'admin',
+                instructor: role === 'instructor',
+                student: role === 'student',
+            };
+
+            res.send(result);
+        });
+        
+
         // initiator db in here
 
         app.get('/instructors', async (req, res) => {
