@@ -56,6 +56,16 @@ async function run() {
             res.send({ token })
         })
 
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+                next();
+            }
+        }
+
 
         // user db in here
 
@@ -82,7 +92,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         })
@@ -124,7 +134,7 @@ async function run() {
 
             res.send(result);
         });
-        
+
 
         // initiator db in here
 
@@ -141,6 +151,21 @@ async function run() {
             const result = await classesCollection.insertOne(body);
             res.send(result)
         })
+
+        app.put('/classes/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedBooking = req.body;
+
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: updatedBooking.status,
+                },
+            };
+
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
 
         app.get('/myClasses', async (req, res) => {
             const email = req.query.email
