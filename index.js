@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const port = process.env.PORT || 5000
 
@@ -12,6 +13,24 @@ const corsOptions = {
 }
 app.use(cors(corsOptions))
 app.use(express.json())
+
+
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' });
+    }
+    const token = authorization.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' });
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.luk9jtm.mongodb.net/?retryWrites=true&w=majority`
@@ -30,6 +49,12 @@ async function run() {
         const instructorCollection = client.db('MartialArtsQuest').collection('instructors')
         const classesCollection = client.db('MartialArtsQuest').collection('classes')
         const studentsCollection = client.db('MartialArtsQuest').collection('addClasses')
+
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            res.send({ token })
+        })
 
 
         // user db in here
@@ -57,12 +82,12 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/users', async (req, res) => { 
+        app.get('/users', async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         })
 
-        app.patch('/users/role/:id', async (req, res) => { 
+        app.patch('/users/role/:id', async (req, res) => {
             const id = req.params.id;
             const role = req.query.role
             const filter = { _id: new ObjectId(id) }
@@ -81,8 +106,8 @@ async function run() {
             const result = await instructorCollection.find().sort({ students: -1 }).toArray();
             res.send(result);
         })
-        
-        app.post("/classes", async (req, res) => { 
+
+        app.post("/classes", async (req, res) => {
             const body = req.body;
             if (!body) {
                 return
@@ -110,24 +135,30 @@ async function run() {
 
 
         // add classes in db
-        
-        app.post('/addClasses', async (req, res) => { 
+
+        app.post('/addClasses', async (req, res) => {
             const item = req.body;
             console.log(item);
             const result = await studentsCollection.insertOne(item);
             res.send(result);
         })
 
-        app.get('/addClasses', async (req, res) => {
+        app.get('/addClasses', verifyJWT, async (req, res) => {
             const email = req.query.email
             if (!email) {
                 res.send([])
             }
+
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({ error: true, message: 'forbidden access' })
+            }
+
             const query = { studentEmail: email }
             const result = await studentsCollection.find(query).toArray();
             res.send(result)
         })
-        
+
 
         // Send a ping to confirm a successful connection
         await client.db('admin').command({ ping: 1 })
