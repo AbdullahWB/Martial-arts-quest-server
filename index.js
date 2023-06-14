@@ -1,8 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
-require('dotenv').config()
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const port = process.env.PORT || 5000
 
 // middleware
@@ -49,6 +50,7 @@ async function run() {
         const instructorCollection = client.db('MartialArtsQuest').collection('instructors')
         const classesCollection = client.db('MartialArtsQuest').collection('classes')
         const studentsCollection = client.db('MartialArtsQuest').collection('addClasses')
+        const paymentCollection = client.db('MartialArtsQuest').collection('payments')
 
         app.post('/jwt', (req, res) => {
             const user = req.body;
@@ -68,16 +70,6 @@ async function run() {
 
 
         // user db in here
-
-        // app.get('/users', async (req, res) => {
-        //     const email = req.query.email
-        //     if (!email) {
-        //         res.send([])
-        //     }
-        //     const query = { email: email }
-        //     const result = await usersCollection.find(query).toArray();
-        //     res.send(result)
-        // })
 
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email
@@ -117,14 +109,14 @@ async function run() {
             const email = req.params.email;
 
             if (req.decoded.email !== email) {
-                res.send({ admin: false, instructor: false, student: false });
+                return res.send({ admin: false, instructor: false, student: false });
             }
 
             const query = { email: email };
             const user = await usersCollection.findOne(query);
 
             if (!user) {
-                res.send({ admin: false, instructor: false, student: false });
+                return res.send({ admin: false, instructor: false, student: false });
             }
 
             const role = user.role;
@@ -186,7 +178,7 @@ async function run() {
         app.get('/myClasses', async (req, res) => {
             const email = req.query.email
             if (!email) {
-                res.send([])
+                return res.send([])
             }
             const query = { instructorEmail: email }
             const result = await classesCollection.find(query).toArray();
@@ -199,6 +191,43 @@ async function run() {
             const result = await classesCollection.find().sort({ students: -1 }).toArray();
             res.send(result);
         })
+
+        // create payment methods
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            console.log(price);
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            })
+        })
+
+        app.get('/payment/:id', async (req, res) => {
+            const id = req.params.id;
+            // console.log(id);
+            const query = { _id: new ObjectId(id) }
+            const result = await classesCollection.findOne(query);
+            res.send(result)
+        })
+
+
+        // payment collection
+
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const deleteResult = await studentsCollection.deleteOne({ _id: new ObjectId(payment.cartItems) });
+
+            res.send({ insertResult, deleteResult });
+        });
+
 
 
         // add classes in db
@@ -213,7 +242,7 @@ async function run() {
         app.get('/addClasses', verifyJWT, async (req, res) => {
             const email = req.query.email
             if (!email) {
-                res.send([])
+                return res.send([])
             }
 
             const decodedEmail = req.decoded.email;
