@@ -163,7 +163,6 @@ async function run() {
         app.put('/classes/:id', async (req, res) => {
             const id = req.params.id;
             const updatedBooking = req.body;
-
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -184,6 +183,40 @@ async function run() {
             const result = await classesCollection.find(query).toArray();
             res.send(result)
         })
+
+        app.patch('/myClasses/enroll/:id', async (req, res) => {
+            const paymentId = req.params.id;
+            console.log(paymentId);
+
+            const paymentQuery = { _id: new ObjectId(paymentId) };
+            const payment = await paymentCollection.findOne(paymentQuery);
+
+            if (!payment) {
+                return res.status(404).send({ error: 'Payment not found' });
+            }
+
+            const cartItemId = payment.cartItems;
+
+            const classQuery = { _id: new ObjectId(cartItemId) };
+            const classToUpdate = await classesCollection.findOne(classQuery);
+
+            if (!classToUpdate) {
+                return res.status(404).send({ error: 'Class not found' });
+            }
+
+            const updateResult = await classesCollection.updateOne(
+                classQuery,
+                { $inc: { availableSeats: -1, enrolled: 1 } }
+            );
+
+            if (updateResult.modifiedCount === 1) {
+                res.send({ message: 'Class enrollment updated successfully' });
+            } else {
+                res.status(500).send({ error: 'Failed to update class enrollment' });
+            }
+        });
+
+
 
         // classes db in here
 
@@ -233,6 +266,13 @@ async function run() {
             const query = { email: email }
             const enrolled = await paymentCollection.find(query).toArray();
             res.send(enrolled)
+        })
+
+        app.delete('/myClasses/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await studentsCollection.deleteOne(query)
+            res.send(result);
         })
 
 
