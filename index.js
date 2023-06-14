@@ -212,7 +212,7 @@ async function run() {
             const id = req.params.id;
             // console.log(id);
             const query = { _id: new ObjectId(id) }
-            const result = await classesCollection.findOne(query);
+            const result = await studentsCollection.findOne(query);
             res.send(result)
         })
 
@@ -227,6 +227,13 @@ async function run() {
 
             res.send({ insertResult, deleteResult });
         });
+
+        app.get('/payment/enrolled/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const enrolled = await paymentCollection.find(query).toArray();
+            res.send(enrolled)
+        })
 
 
 
