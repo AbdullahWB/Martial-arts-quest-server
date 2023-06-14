@@ -92,7 +92,7 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
+        app.get('/users', verifyJWT, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         })
@@ -110,7 +110,9 @@ async function run() {
             res.send(result)
         })
 
+
         // admin role
+
         app.get('/users/role/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
@@ -132,6 +134,20 @@ async function run() {
                 student: role === 'student',
             };
 
+            res.send(result);
+        });
+
+        app.patch('/classes/feedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const feedback = req.body.feedback;
+            console.log(id, feedback);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    feedback: feedback,
+                },
+            };
+            const result = await classesCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
 
